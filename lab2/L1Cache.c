@@ -1,4 +1,4 @@
-#include "SimpleCache.h"
+#include "L1Cache.h"
 
 uint8_t L1Cache[L1_SIZE];
 uint8_t L2Cache[L2_SIZE];
@@ -39,7 +39,7 @@ void accessL1(uint32_t address, uint8_t *data, uint32_t mode) {
 
   /* init cache */
   if (SimpleCache.init == 0) {
-    SimpleCache.line.Valid = 0;
+    SimpleCache.lines.Valid = 0;
     SimpleCache.init = 1;
   }
 
