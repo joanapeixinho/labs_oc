@@ -1,7 +1,6 @@
 #include "L1Cache.h"
 
-uint8_t L1Cache[L1_SIZE];
-uint8_t L2Cache[L2_SIZE];
+
 uint8_t DRAM[DRAM_SIZE];
 uint32_t time;
 Cache CacheL1 = {0};
@@ -35,27 +34,20 @@ void initCache() {
     CacheL1.lines[i].Valid = 0;
     CacheL1.lines[i].Dirty = 0;
     CacheL1.lines[i].Tag = 0;
+    for (int j = 0; j < BLOCK_SIZE; j+=WORD_SIZE) {
+      CacheL1.lines[i].Data[j] = 0;
+    }
   }
-  CacheL1.init = 1;
 }
 
 void accessL1(uint32_t address, uint8_t *data, uint32_t mode) {
 
-  uint32_t index, Tag, MemAddress, word_index, cache_index, byte_index;
+  uint32_t index, Tag, MemAddress, offset, cache_index, byte_index;
   uint8_t TempBlock[BLOCK_SIZE];
-
-  /* init cache */
-  printf("init: %d\n", CacheL1.init);
-  if (CacheL1.init == 0) {
-    initCache();
-  }
 
   Tag = address >> (L1_INDEX_BITS + BLOCK_OFFSET_BITS + WORD_OFFSET_BITS);
   index = (address & 0x3FFF) >> (BLOCK_OFFSET_BITS + WORD_OFFSET_BITS);
-  word_index = (address & 0x3F) >> WORD_OFFSET_BITS;
-  byte_index = (address & 0x3);
-
-  cache_index = (index * BLOCK_SIZE + word_index) * WORD_SIZE + byte_index;
+  offset = (address & 0x3F);
 
   CacheLine *Line = &CacheL1.lines[index];
 
@@ -68,7 +60,7 @@ void accessL1(uint32_t address, uint8_t *data, uint32_t mode) {
     accessDRAM(MemAddress, TempBlock, MODE_READ); // get new block from DRAM
 
     if ((Line->Valid) && (Line->Dirty)) { // line has dirty block
-      MemAddress = ((Line->Tag << L1_INDEX_BITS | index) << BLOCK_OFFSET_BITS | word_index) << WORD_OFFSET_BITS; // get address of the block in memory
+      MemAddress = ((Line->Tag << L1_INDEX_BITS | index) << BLOCK_OFFSET_BITS | offset) << WORD_OFFSET_BITS; // get address of the block in memory
       
       accessDRAM(MemAddress, &(L1Cache[cache_index]), MODE_WRITE); // then write back old block
     }
