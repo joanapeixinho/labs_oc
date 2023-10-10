@@ -5,8 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
-#include "Cache.h"
-
+#include "../Cache.h"
 void resetTime();
 
 uint32_t getTime();
