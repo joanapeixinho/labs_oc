@@ -1,6 +1,5 @@
 #include "L1Cache.h"
 
-
 uint8_t DRAM[DRAM_SIZE];
 uint32_t time;
 Cache CacheL1 = {0};
@@ -51,43 +50,33 @@ void accessL1(uint32_t address, uint8_t *data, uint32_t mode) {
 
   CacheLine *Line = &CacheL1.lines[index];
 
-  MemAddress = address >> WORD_OFFSET_BITS; // again this....!
-  MemAddress = MemAddress << WORD_OFFSET_BITS; // address of the block in memory  
+  MemAddress = address - offset; // get address of the block in memory 
 
   /* access Cache*/
 
+
+/*MISS*/
   if (!Line->Valid || Line->Tag != Tag) {         // if block not present - miss
     accessDRAM(MemAddress, TempBlock, MODE_READ); // get new block from DRAM
 
     if ((Line->Valid) && (Line->Dirty)) { // line has dirty block
-      MemAddress = ((Line->Tag << L1_INDEX_BITS | index) << BLOCK_OFFSET_BITS | offset) << WORD_OFFSET_BITS; // get address of the block in memory
-      
-      accessDRAM(MemAddress, &(L1Cache[cache_index]), MODE_WRITE); // then write back old block
+      accessDRAM(MemAddress, &(Line->Data[offset]), MODE_WRITE); // then write back old block
     }
 
-    memcpy(&(L1Cache[cache_index]), TempBlock, BLOCK_SIZE); // copy new block to cache line
+    memcpy(&(Line->Data[offset]), TempBlock, BLOCK_SIZE); // copy new block to cache line
     Line->Valid = 1;
     Line->Tag = Tag;
     Line->Dirty = 0;
   } // if miss, then replaced with the correct block
 
 
-//we dont know how to handle this part:
   if (mode == MODE_READ) {    // read data from cache line
-    if (0 == (address % WORD_SIZE)) { // even word on block
-      memcpy(data, &(L1Cache[cache_index]), WORD_SIZE);
-    } else { // odd word on block
-      memcpy(data, &(L1Cache[cache_index + WORD_SIZE]), WORD_SIZE);
-    }
+    memcpy(data, &(Line->Data[offset]), WORD_SIZE);
     time += L1_READ_TIME;
   }
 
   if (mode == MODE_WRITE) { // write data from cache line
-    if (!(address % WORD_SIZE)) {   // even word on block
-      memcpy(&(L1Cache[cache_index]), data, WORD_SIZE);
-    } else { // odd word on block
-      memcpy(&(L1Cache[cache_index + WORD_SIZE ]), data, WORD_SIZE);
-    }
+    memcpy(&(Line->Data[offset]), data, WORD_SIZE);
     time += L1_WRITE_TIME;
     Line->Dirty = 1;
   }
