@@ -1,4 +1,4 @@
-#include "L2Cache.h"
+#include "L2_2W_Cache.h"
 
 uint8_t DRAM[DRAM_SIZE];
 uint32_t time;
@@ -37,12 +37,14 @@ void initCache() {
       CacheL2.linesL1[i].Data[j] = 0;
     }
   }
-  for (int i = 0; i < L2_LINES; i++) {
-    CacheL2.linesL2[i].Valid = 0;
-    CacheL2.linesL2[i].Dirty = 0;
-    CacheL2.linesL2[i].Tag = 0;
-    for (int j = 0; j < BLOCK_SIZE; j+=WORD_SIZE) {
-      CacheL2.linesL2[i].Data[j] = 0;
+  for (int i = 0; i < L2_2W_LINES; i++) {
+    for (int k = 0; k < 2; k++) {
+      CacheL2.linesL2[i][k].Valid = 0;
+      CacheL2.linesL2[i][k].Dirty = 0;
+      CacheL2.linesL2[i][k].Tag = 0;
+      for (int j = 0; j < BLOCK_SIZE; j+=WORD_SIZE) {
+        CacheL2.linesL2[i][k].Data[j] = 0;
+      }
     }
   }
 }
@@ -89,41 +91,48 @@ void accessL2(uint32_t address, uint8_t *data, uint32_t mode) {
   uint32_t index, Tag, MemAddress, offset;
   uint8_t TempBlock[BLOCK_SIZE];
 
-  Tag = address >> (L2_INDEX_BITS + BLOCK_OFFSET_BITS + WORD_OFFSET_BITS);
+  Tag = address >> (L2_2W_INDEX_BITS + BLOCK_OFFSET_BITS + WORD_OFFSET_BITS);
   index = (address & 0x3FFF) >> (BLOCK_OFFSET_BITS + WORD_OFFSET_BITS);
   offset = (address & 0x3F); // offset is the first 6 bits
 
-  CacheLine *Line = &CacheL2.linesL2[index];
+  CacheLine *Line = CacheL2.linesL2[index];
 
   MemAddress = address - offset; // get address of the block in memory 
 
   /* access Cache*/
+  block_i lib; 
+  if (Line[0].Valid && Line[0].Tag == Tag) lib = BLOCK0;
 
+  else if (Line[1].Valid && Line[1].Tag == Tag) lib = BLOCK1;
+  
   /*MISS*/
-  if (!Line->Valid || Line->Tag != Tag) {         // if block not present - miss
+  else {
+    lib = CacheL2.LRU[index];
+
     accessDRAM(MemAddress, TempBlock, MODE_READ); // get new block from L2
-    //^^ access L2 aqui?
-    if ((Line->Valid) && (Line->Dirty)) { // line has dirty block
-      accessDRAM(MemAddress, &(Line->Data[offset]), MODE_WRITE); // then write back old block
+    if ((Line[lib].Valid) && (Line[lib].Dirty)) { // line has dirty block
+      accessDRAM(MemAddress, &(Line[lib].Data[offset]), MODE_WRITE); // then write back old block
     }
 
-    memcpy(&(Line->Data[offset]), TempBlock, BLOCK_SIZE); // copy new block to cache line
-    Line->Valid = 1;
-    Line->Tag = Tag;
-    Line->Dirty = 0;
-  } // if miss, then replaced with the correct block
+    memcpy(&(Line[lib].Data[offset]), TempBlock, BLOCK_SIZE); // copy new block to cache line
+    Line[lib].Valid = 1;
+    Line[lib].Tag = Tag;
+    Line[lib].Dirty = 0;
+  }
+
+  CacheL2.LRU[index] = (lib == BLOCK1) ? BLOCK0 : BLOCK1;
 
   if (mode == MODE_READ) {    // read data from cache line
-    memcpy(data, &(Line->Data[offset]), WORD_SIZE);
+    memcpy(data, &(Line[lib].Data[offset]), WORD_SIZE);
     time += L2_READ_TIME;
   }
 
   if (mode == MODE_WRITE) { // write data from cache line
-    memcpy(&(Line->Data[offset]), data, WORD_SIZE);
+    memcpy(&(Line[lib].Data[offset]), data, WORD_SIZE);
     time += L2_WRITE_TIME;
-    Line->Dirty = 1;
+    Line[lib].Dirty = 1;
   }
-// a nossa só funcioa com 2-way set associative
+// a nossa só funciona com 2-way set associative
 // era melhor fzr de uma maneira que funciona com qualquer nº de associativity
 }
 

@@ -90,7 +90,7 @@ void accessL2(uint32_t address, uint8_t *data, uint32_t mode) {
   uint8_t TempBlock[BLOCK_SIZE];
 
   Tag = address >> (L2_INDEX_BITS + BLOCK_OFFSET_BITS + WORD_OFFSET_BITS);
-  index = (address & 0x3FFF) >> (BLOCK_OFFSET_BITS + WORD_OFFSET_BITS);
+  index = (address & 0x7FFF) >> (BLOCK_OFFSET_BITS + WORD_OFFSET_BITS);
   offset = (address & 0x3F); // offset is the first 6 bits
 
   CacheLine *Line = &CacheL2.linesL2[index];
