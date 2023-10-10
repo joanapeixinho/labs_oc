@@ -12,6 +12,7 @@
 #define L2_SIZE (512 * BLOCK_SIZE)    // in bytes
 #define L2_LINES (L2_SIZE / BLOCK_SIZE) // in bytes
 #define L2_INDEX_BITS 9            // 512 lines = 2^9
+#define ASSOCIATIVITY_L2 4        // 4-way set associative
 
 #define MODE_READ 1
 #define MODE_WRITE 0
