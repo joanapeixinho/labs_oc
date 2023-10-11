@@ -63,6 +63,7 @@ void accessL1(uint32_t address, uint8_t *data, uint32_t mode) {
   STATUS("L1 Access %d | Address: %d | Mode: %s| Time before: %d", L1_anum, address, (mode) ? "Read" : "Write", time);
 
   uint32_t index, Tag, offset;
+  uint32_t miss = 0;
   uint8_t TempBlock[BLOCK_SIZE];
 
   Tag = address >> (L1_INDEX_BITS + OFFSET_BITS);
@@ -101,6 +102,7 @@ void accessL1(uint32_t address, uint8_t *data, uint32_t mode) {
     Line->Dirty = 1;
     STATUS("L1 Access %d | Write | Time after: %d", L1_anum++, time);
   }
+  return miss;
 }
 
 void use_block(CacheLine *line, int block_idx) {
@@ -124,6 +126,7 @@ int get_LRU_block(CacheLine *line) {
 void accessL2(uint32_t address, uint8_t *data, uint32_t mode) {
   STATUS("L2 Access %d | Address: %d | Mode: %s| Time before: %d", L2_anum, address, (mode) ? "Read" : "Write", time);
   uint32_t index, Tag, MemAddress, offset;
+  uint32_t miss = 0;
   uint8_t TempBlock[BLOCK_SIZE];
 
   Tag = address >> (L2_ASSOC_INDEX_BITS + OFFSET_BITS);
@@ -186,6 +189,7 @@ void accessL2(uint32_t address, uint8_t *data, uint32_t mode) {
     Line[block_idx].Dirty = 1;
     STATUS("L2 Access %d | Write | Time after: %d", L2_anum++, time);
   }
+  return miss;
 }
 
 void read(uint32_t address, uint8_t *data) {

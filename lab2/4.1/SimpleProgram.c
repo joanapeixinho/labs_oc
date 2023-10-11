@@ -1,56 +1,53 @@
-#include <errno.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h> // exit()
-#include <string.h>
-
-#define CACHE_MIN (8 * 1024)
-#define CACHE_MAX (64 * 1024)
-#define N_REPETITIONS (200)
-
+#include "SimpleCache.h"
 
 int main() {
 
-    uint8_t *array = calloc(CACHE_MAX, sizeof(uint8_t));
-    if (array == NULL) {
-        fprintf(stderr, "[ERR]: failed to allocate %d B: %s\n", CACHE_MAX,
-                strerror(errno));
-        exit(EXIT_FAILURE);
+  // set seed for random number generator
+  srand(0);
+
+  int clock1, value;
+
+  for(int n = 1; n <= DRAM_SIZE/4; n*=WORD_SIZE) {
+
+    resetTime();
+    initCache();
+
+    printf("\nNumber of words: %d\n", (n-1)/WORD_SIZE + 1);
+    
+    for(int i = 0; i < n; i+=WORD_SIZE) {
+      write(i, (unsigned char *)(&i));
+      clock1 = getTime();
+      printf("Write; Address %d; Value %d; Time %d\n", i, i, clock1);
     }
 
+    for(int i = 0; i < n; i+=WORD_SIZE) {
+      read(i, (unsigned char *)(&value));
+      clock1 = getTime();
+      printf("Read; Address %d; Value %d; Time %d\n", i, value, clock1);
+    }  
 
+  }
 
-    for (size_t cache_size = CACHE_MIN; cache_size <= CACHE_MAX;
-         cache_size = cache_size * 2) {
-        for (size_t stride = 1; stride <= cache_size / 2; stride = stride * 2) {
-            size_t const limit = cache_size - stride + 1;
+  printf("\nRandom accesses\n");
 
-
-      
-
-            /************************************/
-            size_t n_iterations = 0;
-            for (size_t repeat = 0; repeat <= N_REPETITIONS * stride; repeat++) {
-                for (size_t index = 0; index < limit; index += stride, n_iterations++) {
-                    array[index] = array[index] + 1;
-                }
-            }
-
-            /************************************/
-            float const avg_misses = (float)(values[0]) / n_iterations;
-            float const avg_time = (float)(end_usec - start_usec) / n_iterations;
-            float const avg_cycles = (float)(end_cycles - start_cycles) / n_iterations;
-            fprintf(stdout,
-                    "cache_size=%zu\tstride=%zu\tavg_misses=%f\tavg_cycl_time=%f\n",
-                    cache_size, stride, avg_misses, avg_time);
-        }
+  // Do random accesses to the cache
+  for(int i = 0; i < 100; i++) {
+    int address = rand() % (DRAM_SIZE/4);
+    address = address - address % WORD_SIZE;
+    int mode = rand() % 2;
+    if (mode == MODE_READ) {
+      read(address, (unsigned char *)(&value));
+      clock1 = getTime();
+      printf("Read; Address %d; Value %d; Time %d\n", address, value, clock1);
     }
+    else {
+      write(address, (unsigned char *)(&address));
+      clock1 = getTime();
+      printf("Write; Address %d; Value %d; Time %d\n", address, address, clock1);
+    }
+  }
 
-    return 0;
-}
 
-void handle_error(char *outstring) {
-    printf("Error in PAPI function call %s\n", outstring);
-    PAPI_perror("PAPI Error");
-    exit(EXIT_FAILURE);
+  
+  return 0;
 }
