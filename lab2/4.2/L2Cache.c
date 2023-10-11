@@ -49,12 +49,12 @@ void initCache() {
 
 void accessL1(uint32_t address, uint8_t *data, uint32_t mode) {
 
-  uint32_t index, Tag, MemAddress, offset;
+  uint32_t index, Tag, offset;
   uint8_t TempBlock[BLOCK_SIZE];
 
-  Tag = address >> (L1_INDEX_BITS + BLOCK_OFFSET_BITS + WORD_OFFSET_BITS);
-  index = (address & 0x3FFF) >> (BLOCK_OFFSET_BITS + WORD_OFFSET_BITS);
-  offset = (address & 0x3F); // offset is the first 6 bits
+  Tag = address >> (L1_INDEX_BITS + OFFSET_BITS);
+  index = (address & ((1 << (L1_INDEX_BITS + OFFSET_BITS)) - 1)) >> (OFFSET_BITS); 
+  offset = (address & ((1 << OFFSET_BITS) - 1));
 
   CacheLine *Line = &CacheL2.linesL1[index];
 
@@ -89,9 +89,9 @@ void accessL2(uint32_t address, uint8_t *data, uint32_t mode) {
   uint32_t index, Tag, MemAddress, offset;
   uint8_t TempBlock[BLOCK_SIZE];
 
-  Tag = address >> (L2_INDEX_BITS + BLOCK_OFFSET_BITS + WORD_OFFSET_BITS);
-  index = (address & 0x7FFF) >> (BLOCK_OFFSET_BITS + WORD_OFFSET_BITS);
-  offset = (address & 0x3F); // offset is the first 6 bits
+  Tag = address >> (L2_INDEX_BITS + OFFSET_BITS);
+  index = (address & ((1 << (L2_INDEX_BITS + OFFSET_BITS)) - 1)) >> (OFFSET_BITS); 
+  offset = (address & ((1 << OFFSET_BITS) - 1));
 
   CacheLine *Line = &CacheL2.linesL2[index];
 
@@ -104,7 +104,7 @@ void accessL2(uint32_t address, uint8_t *data, uint32_t mode) {
     accessDRAM(MemAddress, TempBlock, MODE_READ); // get new block from L2
     //^^ access L2 aqui?
     if ((Line->Valid) && (Line->Dirty)) { // line has dirty block
-      accessDRAM(MemAddress, &(Line->Data[offset]), MODE_WRITE); // then write back old block
+      accessDRAM(MemAddress, &(Line->Data[offset]), MODE_WRITE); // then write back old block (Write Back policy)
     }
 
     memcpy(&(Line->Data[offset]), TempBlock, BLOCK_SIZE); // copy new block to cache line
@@ -123,8 +123,7 @@ void accessL2(uint32_t address, uint8_t *data, uint32_t mode) {
     time += L2_WRITE_TIME;
     Line->Dirty = 1;
   }
-// a nossa só funcioa com 2-way set associative
-// era melhor fzr de uma maneira que funciona com qualquer nº de associativity
+
 }
 
 

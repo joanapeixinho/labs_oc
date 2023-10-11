@@ -1,4 +1,4 @@
-#include "L2_2W_Cache.h"
+#include "L2_Assoc_Cache.h"
 
 uint8_t DRAM[DRAM_SIZE];
 uint32_t time;
@@ -37,7 +37,7 @@ void initCache() {
       CacheL2.linesL1[i].Data[j] = 0;
     }
   }
-  for (int i = 0; i < L2_2W_LINES; i++) {
+  for (int i = 0; i < L2_ASSOC_LINES; i++) {
     for (int k = 0; k < 2; k++) {
       CacheL2.linesL2[i][k].Valid = 0;
       CacheL2.linesL2[i][k].Dirty = 0;
@@ -51,12 +51,12 @@ void initCache() {
 
 void accessL1(uint32_t address, uint8_t *data, uint32_t mode) {
 
-  uint32_t index, Tag, MemAddress, offset;
+  uint32_t index, Tag, offset;
   uint8_t TempBlock[BLOCK_SIZE];
 
-  Tag = address >> (L1_INDEX_BITS + BLOCK_OFFSET_BITS + WORD_OFFSET_BITS);
-  index = (address & 0x3FFF) >> (BLOCK_OFFSET_BITS + WORD_OFFSET_BITS);
-  offset = (address & 0x3F); // offset is the first 6 bits
+  Tag = address >> (L1_INDEX_BITS + OFFSET_BITS);
+  index = (address & ((1 << (L1_INDEX_BITS + OFFSET_BITS)) - 1)) >> (OFFSET_BITS); 
+  offset = (address & ((1 << OFFSET_BITS) - 1));
 
   CacheLine *Line = &CacheL2.linesL1[index];
 
@@ -65,7 +65,7 @@ void accessL1(uint32_t address, uint8_t *data, uint32_t mode) {
   if (!Line->Valid || Line->Tag != Tag) {         // if block not present - miss
     accessL2(address, TempBlock, MODE_READ); // get new block from L2
     if ((Line->Valid) && (Line->Dirty)) { // line has dirty block
-      accessL2(address, &(Line->Data[offset]), MODE_WRITE); // then write back old block
+      accessL2(address, &(Line->Data[offset]), MODE_WRITE); // then write back old block (Write Back policy)
     }
 
     memcpy(&(Line->Data[offset]), TempBlock, BLOCK_SIZE); // copy new block to cache line
@@ -91,9 +91,9 @@ void accessL2(uint32_t address, uint8_t *data, uint32_t mode) {
   uint32_t index, Tag, MemAddress, offset;
   uint8_t TempBlock[BLOCK_SIZE];
 
-  Tag = address >> (L2_2W_INDEX_BITS + BLOCK_OFFSET_BITS + WORD_OFFSET_BITS);
-  index = (address & 0x3FFF) >> (BLOCK_OFFSET_BITS + WORD_OFFSET_BITS);
-  offset = (address & 0x3F); // offset is the first 6 bits
+  Tag = address >> (L2_ASSOC_INDEX_BITS + OFFSET_BITS);
+  index = (address & ((1 << (L2_ASSOC_INDEX_BITS + OFFSET_BITS)) - 1)) >> (OFFSET_BITS); 
+  offset = (address & ((1 << OFFSET_BITS) - 1));
 
   CacheLine *Line = CacheL2.linesL2[index];
 
