@@ -7,7 +7,7 @@
 #include <stdint.h>
 #include "../Cache.h"
 
-typedef enum _block_i_ {BLOCK0 = 0, BLOCK1 = 1} block_i;
+typedef enum block_i {BLOCK0 = 0, BLOCK1 = 1} block_i;
 
 void resetTime();
 
@@ -20,6 +20,13 @@ void accessDRAM(uint32_t, uint8_t *, uint32_t);
 
 void initCache();
 void accessL1(uint32_t, uint8_t *, uint32_t);
+void accessL2(uint32_t, uint8_t *, uint32_t);
+
+typedef struct LRUNode {
+    int lib;
+    struct LRUNode* prev;
+    struct LRUNode* next;
+} LRUNode;
 
 typedef struct CacheLine {
   uint8_t Valid;
@@ -30,8 +37,8 @@ typedef struct CacheLine {
 
 typedef struct Cache {
   CacheLine linesL1[L1_LINES];
-  CacheLine linesL2[L2_LINES][2];
-  block_i LRU[L2_LINES];
+  CacheLine linesL2[L2_ASSOC_LINES][L2_ASSOCIATIVITY];
+  block_i LRU[L2_ASSOC_LINES];
 } Cache;
 
 /*********************** Interfaces *************************/
