@@ -26,7 +26,7 @@ void accessDRAM(uint32_t address, uint8_t *data, uint32_t mode) {
   }
 }
 
-/*********************** L1 cache *************************/
+/*********************** L1 e L2 caches *************************/
 
 void initCache() { 
   for (int i = 0; i < L1_LINES; i++) {
@@ -38,10 +38,11 @@ void initCache() {
     }
   }
   for (int i = 0; i < L2_ASSOC_LINES; i++) {
-    for (int k = 0; k < 2; k++) {
+    for (int k = 0; k < L2_ASSOCIATIVITY; k++) {
       CacheL2.linesL2[i][k].Valid = 0;
       CacheL2.linesL2[i][k].Dirty = 0;
       CacheL2.linesL2[i][k].Tag = 0;
+      CacheL2.linesL2[i][k].LRU_idx = k;
       for (int j = 0; j < BLOCK_SIZE; j+=WORD_SIZE) {
         CacheL2.linesL2[i][k].Data[j] = 0;
       }
@@ -87,6 +88,24 @@ void accessL1(uint32_t address, uint8_t *data, uint32_t mode) {
   }
 }
 
+void use_block(CacheLine *line, int block_idx) {
+  for (int i = 0; i < L2_ASSOCIATIVITY; i++) {
+    if (line[i].LRU_idx > line[block_idx].LRU_idx) {
+      line[i].LRU_idx--;
+    }
+  }
+  line[block_idx].LRU_idx = L2_ASSOCIATIVITY - 1;
+}
+
+int get_LRU_block(CacheLine *line) {
+  for (int i = 0; i < L2_ASSOCIATIVITY; i++) {
+    if (line[i].LRU_idx == 0) {
+      return i;
+    }
+  }
+  return -1;
+}
+
 void accessL2(uint32_t address, uint8_t *data, uint32_t mode) {
   uint32_t index, Tag, MemAddress, offset;
   uint8_t TempBlock[BLOCK_SIZE];
@@ -100,42 +119,41 @@ void accessL2(uint32_t address, uint8_t *data, uint32_t mode) {
   MemAddress = address - offset; // get address of the block in memory 
 
   /* access Cache*/
-  block_i lib; 
-  if (Line[0].Valid && Line[0].Tag == Tag) lib = BLOCK0;
-
-  else if (Line[1].Valid && Line[1].Tag == Tag) lib = BLOCK1;
-  
+  int block_idx = -1;
+  for (int i = 0; i < L2_ASSOCIATIVITY; i++) {
+    if (Line[i].Valid && Line[i].Tag == Tag) {
+      block_idx = i;
+      break;
+    }
+  }
   /*MISS*/
-  else {
-    lib = CacheL2.LRU[index];
+  if (block_idx == -1) {         // if block not present - miss
+    block_idx = get_LRU_block(Line);
 
     accessDRAM(MemAddress, TempBlock, MODE_READ); // get new block from L2
-    if ((Line[lib].Valid) && (Line[lib].Dirty)) { // line has dirty block
-      accessDRAM(MemAddress, &(Line[lib].Data[offset]), MODE_WRITE); // then write back old block
+    if ((Line[block_idx].Valid) && (Line[block_idx].Dirty)) { // line has dirty block
+      accessDRAM(MemAddress, &(Line[block_idx].Data[offset]), MODE_WRITE); // then write back old block
     }
 
-    memcpy(&(Line[lib].Data[offset]), TempBlock, BLOCK_SIZE); // copy new block to cache line
-    Line[lib].Valid = 1;
-    Line[lib].Tag = Tag;
-    Line[lib].Dirty = 0;
+    memcpy(&(Line[block_idx].Data[offset]), TempBlock, BLOCK_SIZE); // copy new block to cache line
+    Line[block_idx].Valid = 1;
+    Line[block_idx].Tag = Tag;
+    Line[block_idx].Dirty = 0;
   }
-
-  CacheL2.LRU[index] = (lib == BLOCK1) ? BLOCK0 : BLOCK1;
+  
+  use_block(Line, block_idx);
 
   if (mode == MODE_READ) {    // read data from cache line
-    memcpy(data, &(Line[lib].Data[offset]), WORD_SIZE);
+    memcpy(data, &(Line[block_idx].Data[offset]), WORD_SIZE);
     time += L2_READ_TIME;
   }
 
   if (mode == MODE_WRITE) { // write data from cache line
-    memcpy(&(Line[lib].Data[offset]), data, WORD_SIZE);
+    memcpy(&(Line[block_idx].Data[offset]), data, WORD_SIZE);
     time += L2_WRITE_TIME;
-    Line[lib].Dirty = 1;
+    Line[block_idx].Dirty = 1;
   }
-// a nossa só funciona com 2-way set associative
-// era melhor fzr de uma maneira que funciona com qualquer nº de associativity
 }
-
 
 void read(uint32_t address, uint8_t *data) {
   accessL1(address, data, MODE_READ);
