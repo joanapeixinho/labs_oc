@@ -1,14 +1,9 @@
 CC = gcc
-CFLAGS = -Wall -Wextra
-TARGET = SimpleProgram
-PAPILIB_ALAMEDA = /usr/lib/x86_64-linux-gnu/libpapi.so
+CFLAGS=-Wall -Wextra
+TARGET=SimpleCache
 
-SRCS = SimpleProgram.c L1Cache.c
-
-$(TARGET): $(SRCS)
-	$(CC) $(CFLAGS) $(SRCS) $(PAPILIB_ALAMEDA) -o $(TARGET)
-
-all: $(TARGET)
+all:
+	$(CC) $(CFLAGS) SimpleProgram.c L1Cache.c -o $(TARGET)
 
 clean:
 	rm $(TARGET)
