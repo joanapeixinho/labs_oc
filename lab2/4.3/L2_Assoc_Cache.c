@@ -59,7 +59,7 @@ void initCache() {
   }
 }
 
-void accessL1(uint32_t address, uint8_t *data, uint32_t mode) {
+int accessL1(uint32_t address, uint8_t *data, uint32_t mode) {
   STATUS("L1 Access %d | Address: %d | Mode: %s| Time before: %d", L1_anum, address, (mode) ? "Read" : "Write", time);
 
   uint32_t index, Tag, offset;
@@ -75,6 +75,7 @@ void accessL1(uint32_t address, uint8_t *data, uint32_t mode) {
 
   /*MISS*/
   if (!Line->Valid || Line->Tag != Tag) {         // if block not present - miss
+    miss = 1;
     STATUS("L1 Miss: Getting new block from L2");
     accessL2(address, TempBlock, MODE_READ); // get new block from L2
     if ((Line->Valid) && (Line->Dirty)) { // line has dirty block
@@ -123,7 +124,7 @@ int get_LRU_block(CacheLine *line) {
   return -1;
 }
 
-void accessL2(uint32_t address, uint8_t *data, uint32_t mode) {
+int accessL2(uint32_t address, uint8_t *data, uint32_t mode) {
   STATUS("L2 Access %d | Address: %d | Mode: %s| Time before: %d", L2_anum, address, (mode) ? "Read" : "Write", time);
   uint32_t index, Tag, MemAddress, offset;
   uint32_t miss = 0;
@@ -153,7 +154,7 @@ void accessL2(uint32_t address, uint8_t *data, uint32_t mode) {
 
   /*MISS*/
   if (block_idx == -1 || !Line[block_idx].Valid) {         // if block not present - miss
-    
+    miss = 1;
     if (block_idx == -1) {
       block_idx = get_LRU_block(Line);
       STATUS("L2 Miss: No empty blocks -> Getting new block from memory");
@@ -192,12 +193,12 @@ void accessL2(uint32_t address, uint8_t *data, uint32_t mode) {
   return miss;
 }
 
-void read(uint32_t address, uint8_t *data) {
+int read(uint32_t address, uint8_t *data) {
   STATUS("Request to read address %d", address);
-  accessL1(address, data, MODE_READ);
+  return accessL1(address, data, MODE_READ);
 }
 
-void write(uint32_t address, uint8_t *data) {
+int write(uint32_t address, uint8_t *data) {
   STATUS("Request to write address %d", address);
-  accessL1(address, data, MODE_WRITE);
+  return accessL1(address, data, MODE_WRITE);
 }
