@@ -41,7 +41,8 @@ void initCache() {
 
 int accessL1(uint32_t address, uint8_t *data, uint32_t mode) {
 
-  uint32_t index, Tag, MemAddress, offset, miss;
+  uint32_t index, Tag, MemAddress, offset;
+  uint32_t miss = 0;
   uint8_t TempBlock[BLOCK_SIZE];
 
   Tag = address >> (L1_INDEX_BITS + OFFSET_BITS);
