@@ -1,13 +1,11 @@
-#ifndef L2_2W_CACHE_H
-#define L2_2W_CACHE_H
+#ifndef L2_ASSOC_CACHE_H
+#define L2_ASSOC_CACHE_H
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
 #include "../Cache.h"
-
-typedef enum block_i {BLOCK0 = 0, BLOCK1 = 1} block_i;
 
 void resetTime();
 
@@ -33,12 +31,12 @@ typedef struct CacheLine {
   uint8_t Dirty;
   uint32_t Tag;
   uint8_t Data[BLOCK_SIZE];
+  int LRU_idx;
 } CacheLine;
 
 typedef struct Cache {
   CacheLine linesL1[L1_LINES];
   CacheLine linesL2[L2_ASSOC_LINES][L2_ASSOCIATIVITY];
-  block_i LRU[L2_ASSOC_LINES];
 } Cache;
 
 /*********************** Interfaces *************************/
