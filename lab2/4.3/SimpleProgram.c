@@ -46,6 +46,8 @@ int main() {
       printf("Write; Address %d; Value %d; Time %d\n", address, address, clock1);
     }
   }
+
+
   
   return 0;
 }
