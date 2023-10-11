@@ -1,6 +1,15 @@
 #ifndef CACHE_H
 #define CACHE_H
 
+/*Utils*/
+#define DEBUG (1)
+#define STATUS(...) {                       \
+    if (DEBUG) {                            \
+        printf("[STATUS] " __VA_ARGS__);    \
+        printf("\n");                       \
+    }                                       \
+}
+
 #define WORD_SIZE (4)                 // in bytes, i.e 32 bit words
 #define WORD_OFFSET_BITS (2)         // 4 bytes = 2^2 
 #define BLOCK_SIZE (16 * WORD_SIZE)    // in bytes
