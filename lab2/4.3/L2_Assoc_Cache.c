@@ -50,9 +50,10 @@ void initCache() {
   }
 }
 
-void accessL1(uint32_t address, uint8_t *data, uint32_t mode) {
+int accessL1(uint32_t address, uint8_t *data, uint32_t mode) {
 
   uint32_t index, Tag, offset;
+  uint32_t miss = 0;
   uint8_t TempBlock[BLOCK_SIZE];
 
   Tag = address >> (L1_INDEX_BITS + OFFSET_BITS);
@@ -64,7 +65,7 @@ void accessL1(uint32_t address, uint8_t *data, uint32_t mode) {
 
   /*MISS*/
   if (!Line->Valid || Line->Tag != Tag) {         // if block not present - miss
-    accessL2(address, TempBlock, MODE_READ); // get new block from L2
+    miss = accessL2(address, TempBlock, MODE_READ); // get new block from L2
     if ((Line->Valid) && (Line->Dirty)) { // line has dirty block
       accessL2(address, &(Line->Data[offset]), MODE_WRITE); // then write back old block (Write Back policy)
     }
@@ -86,6 +87,7 @@ void accessL1(uint32_t address, uint8_t *data, uint32_t mode) {
     time += L1_WRITE_TIME;
     Line->Dirty = 1;
   }
+  return miss;
 }
 
 void use_block(CacheLine *line, int block_idx) {
@@ -106,8 +108,9 @@ int get_LRU_block(CacheLine *line) {
   return -1;
 }
 
-void accessL2(uint32_t address, uint8_t *data, uint32_t mode) {
+int accessL2(uint32_t address, uint8_t *data, uint32_t mode) {
   uint32_t index, Tag, MemAddress, offset;
+  uint32_t miss = 0;
   uint8_t TempBlock[BLOCK_SIZE];
 
   Tag = address >> (L2_ASSOC_INDEX_BITS + OFFSET_BITS);
@@ -128,6 +131,7 @@ void accessL2(uint32_t address, uint8_t *data, uint32_t mode) {
   }
   /*MISS*/
   if (block_idx == -1) {         // if block not present - miss
+    miss = 1;
     block_idx = get_LRU_block(Line);
 
     accessDRAM(MemAddress, TempBlock, MODE_READ); // get new block from L2
@@ -153,12 +157,13 @@ void accessL2(uint32_t address, uint8_t *data, uint32_t mode) {
     time += L2_WRITE_TIME;
     Line[block_idx].Dirty = 1;
   }
+  return miss;
 }
 
-void read(uint32_t address, uint8_t *data) {
-  accessL1(address, data, MODE_READ);
+int read(uint32_t address, uint8_t *data) {
+  return accessL1(address, data, MODE_READ);
 }
 
-void write(uint32_t address, uint8_t *data) {
-  accessL1(address, data, MODE_WRITE);
+int write(uint32_t address, uint8_t *data) {
+  return accessL1(address, data, MODE_WRITE);
 }
