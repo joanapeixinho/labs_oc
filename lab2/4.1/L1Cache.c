@@ -39,10 +39,9 @@ void initCache() {
   }
 }
 
-int accessL1(uint32_t address, uint8_t *data, uint32_t mode) {
+void accessL1(uint32_t address, uint8_t *data, uint32_t mode) {
 
   uint32_t index, Tag, MemAddress, offset;
-  uint32_t miss = 0;
   uint8_t TempBlock[BLOCK_SIZE];
 
   Tag = address >> (L1_INDEX_BITS + OFFSET_BITS);
@@ -59,7 +58,6 @@ int accessL1(uint32_t address, uint8_t *data, uint32_t mode) {
 /*MISS*/
   if (!Line->Valid || Line->Tag != Tag) {         // if block not present - miss
     accessDRAM(MemAddress, TempBlock, MODE_READ); // get new block from DRAM
-    miss = 1;
     if ((Line->Valid) && (Line->Dirty)) { // line has dirty block
       accessDRAM(MemAddress, &(Line->Data[offset]), MODE_WRITE); // then write back old block (Write Back policy)
     }
@@ -81,15 +79,12 @@ int accessL1(uint32_t address, uint8_t *data, uint32_t mode) {
     time += L1_WRITE_TIME;
     Line->Dirty = 1;
   }
-  return miss;
 }
 
-int read(uint32_t address, uint8_t *data) {
-  int miss = accessL1(address, data, MODE_READ);
-  return miss;
+void read(uint32_t address, uint8_t *data) {
+  accessL1(address, data, MODE_READ);
 }
 
-int write(uint32_t address, uint8_t *data) {
-  int miss = accessL1(address, data, MODE_WRITE);
-  return miss;
+void write(uint32_t address, uint8_t *data) {
+  accessL1(address, data, MODE_WRITE);
 }
