@@ -20,12 +20,6 @@ void initCache();
 void accessL1(uint32_t, uint8_t *, uint32_t);
 void accessL2(uint32_t, uint8_t *, uint32_t);
 
-typedef struct LRUNode {
-    int lib;
-    struct LRUNode* prev;
-    struct LRUNode* next;
-} LRUNode;
-
 typedef struct CacheLine {
   uint8_t Valid;
   uint8_t Dirty;
