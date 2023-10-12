@@ -1,53 +1,35 @@
-#include "SimpleCache.h"
+
+#include "L1Cache.h"
+#include <stdio.h>
 
 int main() {
+    initCache(); // Initialize the L1 cache
 
-  // set seed for random number generator
-  srand(0);
+    // Define addresses for cache fill and access
+    uint32_t fillAddresses[] = {0, 64, 128, 192};
+    uint32_t accessAddresses[] = {0, 64, 128, 192, 256};
 
-  int clock1, value;
-
-  for(int n = 1; n <= DRAM_SIZE/4; n*=WORD_SIZE) {
-
-    resetTime();
-    initCache();
-
-    printf("\nNumber of words: %d\n", (n-1)/WORD_SIZE + 1);
-    
-    for(int i = 0; i < n; i+=WORD_SIZE) {
-      write(i, (unsigned char *)(&i));
-      clock1 = getTime();
-      printf("Write; Address %d; Value %d; Time %d\n", i, i, clock1);
+    // Fill the cache with data
+    for (int i = 0; i < sizeof(fillAddresses) / sizeof(uint32_t); i++) {
+        uint8_t data = i + 10;
+        int miss = write(fillAddresses[i], &data);
+        if (miss) {
+            printf("Cache miss on write at address %d\n", fillAddresses[i]);
+        } else {
+            printf("Wrote data %d to address %d\n", data, fillAddresses[i]);
+        }
     }
 
-    for(int i = 0; i < n; i+=WORD_SIZE) {
-      read(i, (unsigned char *)(&value));
-      clock1 = getTime();
-      printf("Read; Address %d; Value %d; Time %d\n", i, value, clock1);
-    }  
-
-  }
-
-  printf("\nRandom accesses\n");
-
-  // Do random accesses to the cache
-  for(int i = 0; i < 100; i++) {
-    int address = rand() % (DRAM_SIZE/4);
-    address = address - address % WORD_SIZE;
-    int mode = rand() % 2;
-    if (mode == MODE_READ) {
-      read(address, (unsigned char *)(&value));
-      clock1 = getTime();
-      printf("Read; Address %d; Value %d; Time %d\n", address, value, clock1);
+    // Access the cache to check for cache misses
+    for (int i = 0; i < sizeof(accessAddresses) / sizeof(uint32_t); i++) {
+        uint8_t data;
+        int miss = read(accessAddresses[i], &data);
+        if (miss) {
+            printf("Cache miss on read at address %d\n", accessAddresses[i]);
+        } else {
+            printf("Read data from address %d: %d\n", accessAddresses[i], data);
+        }
     }
-    else {
-      write(address, (unsigned char *)(&address));
-      clock1 = getTime();
-      printf("Write; Address %d; Value %d; Time %d\n", address, address, clock1);
-    }
-  }
 
-
-  
-  return 0;
+    return 0;
 }
