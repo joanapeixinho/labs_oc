@@ -1,9 +1,9 @@
 CC = gcc
 CFLAGS=-Wall -Wextra
-TARGET=SimpleCache
+TARGET=L2_Assoc_Cache
 
 all:
-	$(CC) $(CFLAGS) my_tests/01.c L2_Assoc_Cache.c -o $(TARGET)
+	$(CC) $(CFLAGS) L2_Assoc_Cache.c -o $(TARGET)
 
 clean:
 	rm $(TARGET)
