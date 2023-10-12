@@ -3,7 +3,7 @@ CFLAGS=-Wall -Wextra
 TARGET=L2Cache
 
 all:
-	$(CC) $(CFLAGS)  L2Cache.c -o $(TARGET)
+	$(CC) $(CFLAGS)  L2Cache.c  SimpleProgram.c -o $(TARGET)
 
 clean:
 	rm $(TARGET)
