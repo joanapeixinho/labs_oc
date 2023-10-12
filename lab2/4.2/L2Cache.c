@@ -49,7 +49,7 @@ void initCache() {
 
 void accessL1(uint32_t address, uint8_t *data, uint32_t mode) {
 
-  uint32_t index, Tag, offset;
+  uint32_t index, Tag, offset, L2Address;
   uint8_t TempBlock[BLOCK_SIZE];
 
   Tag = address >> (L1_INDEX_BITS + OFFSET_BITS);
@@ -58,11 +58,13 @@ void accessL1(uint32_t address, uint8_t *data, uint32_t mode) {
 
   CacheLine *Line = &CacheL2.linesL1[index];
 
+  L2Address = address - offset;
+
   /*MISS*/
   if (!Line->Valid || Line->Tag != Tag) {         // if block not present - miss
     accessL2(address, TempBlock, MODE_READ); // get new block from L2
     if ((Line->Valid) && (Line->Dirty)) { // line has dirty block
-      accessL2(address, &(Line->Data[offset]), MODE_WRITE); // then write back old block
+      accessL2(L2Address, &(Line->Data[offset]), MODE_WRITE); // then write back old block
     }
 
     memcpy(&(Line->Data[offset]), TempBlock, BLOCK_SIZE); // copy new block to cache line
@@ -102,7 +104,8 @@ void accessL2(uint32_t address, uint8_t *data, uint32_t mode) {
   if (!Line->Valid || Line->Tag != Tag) {         // if block not present - miss
     accessDRAM(MemAddress, TempBlock, MODE_READ); // get new block from L2
     if ((Line->Valid) && (Line->Dirty)) { // line has dirty block
-      accessDRAM(MemAddress, &(Line->Data[offset]), MODE_WRITE); // then write back old block (Write Back policy)
+      uint32_t MemAddress_old = (Line->Tag << L2_INDEX_BITS || index) << OFFSET_BITS;
+      accessDRAM(MemAddress_old, &(Line->Data[offset]), MODE_WRITE); // then write back old block (Write Back policy)
     }
 
     memcpy(&(Line->Data[offset]), TempBlock, BLOCK_SIZE); // copy new block to cache line

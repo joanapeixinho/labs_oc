@@ -68,7 +68,8 @@ void accessL1(uint32_t address, uint8_t *data, uint32_t mode) {
   if (!Line->Valid || Line->Tag != Tag) {         // if block not present - miss
     accessL2(address, TempBlock, MODE_READ); // get new block from L2
     if ((Line->Valid) && (Line->Dirty)) { // line has dirty block
-      accessL2(address, &(Line->Data[offset]), MODE_WRITE); // then write back old block (Write Back policy)
+      uint32_t MemAddress_old = (Line->Tag << L1_INDEX_BITS || index) << OFFSET_BITS;
+      accessL2(MemAddress_old, &(Line->Data[offset]), MODE_WRITE); // then write back old block (Write Back policy)
     }
 
     memcpy(&(Line->Data[offset]), TempBlock, BLOCK_SIZE); // copy new block to cache line
@@ -140,7 +141,8 @@ void accessL2(uint32_t address, uint8_t *data, uint32_t mode) {
 
     accessDRAM(MemAddress, TempBlock, MODE_READ); // get new block from L2
     if ((Line[block_idx].Valid) && (Line[block_idx].Dirty)) { // line has dirty block
-      accessDRAM(MemAddress, &(Line[block_idx].Data[offset]), MODE_WRITE); // then write back old block
+      uint32_t MemAddress_old = (Line->Tag << L2_ASSOC_INDEX_BITS || index) << OFFSET_BITS;
+      accessDRAM(MemAddress_old, &(Line[block_idx].Data[offset]), MODE_WRITE); // then write back old block (Write Back policy)
     }
     
     memcpy(&(Line[block_idx].Data[offset]), TempBlock, BLOCK_SIZE); // copy new block to cache line
