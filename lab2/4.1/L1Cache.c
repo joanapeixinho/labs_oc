@@ -2,6 +2,7 @@
 
 uint8_t DRAM[DRAM_SIZE];
 uint32_t time;
+uint32_t total_misses = 0;
 Cache CacheL1 = {0};
 
 /**************** Time Manipulation ***************/
@@ -57,9 +58,11 @@ void accessL1(uint32_t address, uint8_t *data, uint32_t mode) {
 
 /*MISS*/
   if (!Line->Valid || Line->Tag != Tag) {         // if block not present - miss
+    total_misses++;
     accessDRAM(MemAddress, TempBlock, MODE_READ); // get new block from DRAM
     if ((Line->Valid) && (Line->Dirty)) { // line has dirty block
-      accessDRAM(MemAddress, &(Line->Data[offset]), MODE_WRITE); // then write back old block (Write Back policy)
+      uint32_t MemAddress_old = (Line->Tag << L1_INDEX_BITS || index) << OFFSET_BITS;
+      accessDRAM(MemAddress_old, &(Line->Data[offset]), MODE_WRITE); // then write back old block (Write Back policy)
     }
 
     memcpy(&(Line->Data[offset]), TempBlock, BLOCK_SIZE); // copy new block to cache line

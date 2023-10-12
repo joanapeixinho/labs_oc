@@ -115,12 +115,12 @@ void accessL2(uint32_t address, uint8_t *data, uint32_t mode) {
   } // if miss, then replaced with the correct block
 
   if (mode == MODE_READ) {    // read data from cache line
-    memcpy(data, &(Line->Data[offset]), WORD_SIZE);
+    memcpy(data, &(Line->Data[offset]), BLOCK_SIZE);
     time += L2_READ_TIME;
   }
 
   if (mode == MODE_WRITE) { // write data from cache line
-    memcpy(&(Line->Data[offset]), data, WORD_SIZE);
+    memcpy(&(Line->Data[offset]), data, BLOCK_SIZE);
     time += L2_WRITE_TIME;
     Line->Dirty = 1;
   }

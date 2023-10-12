@@ -138,8 +138,8 @@ void accessL2(uint32_t address, uint8_t *data, uint32_t mode) {
     if (block_idx == -1) {
       block_idx = get_LRU_block(Line);
     }
-
     accessDRAM(MemAddress, TempBlock, MODE_READ); // get new block from L2
+    
     if ((Line[block_idx].Valid) && (Line[block_idx].Dirty)) { // line has dirty block
       uint32_t MemAddress_old = (Line->Tag << L2_ASSOC_INDEX_BITS || index) << OFFSET_BITS;
       accessDRAM(MemAddress_old, &(Line[block_idx].Data[offset]), MODE_WRITE); // then write back old block (Write Back policy)
@@ -154,12 +154,12 @@ void accessL2(uint32_t address, uint8_t *data, uint32_t mode) {
   use_block(Line, block_idx);
 
   if (mode == MODE_READ) {    // read data from cache line
-    memcpy(data, &(Line[block_idx].Data[offset]), WORD_SIZE);
+    memcpy(data, &(Line[block_idx].Data[offset]), BLOCK_SIZE);
     time += L2_READ_TIME;
   }
 
   if (mode == MODE_WRITE) { // write data from cache line
-    memcpy(&(Line[block_idx].Data[offset]), data, WORD_SIZE);
+    memcpy(&(Line[block_idx].Data[offset]), data, BLOCK_SIZE);
     time += L2_WRITE_TIME;
     Line[block_idx].Dirty = 1;
   }
