@@ -51,7 +51,7 @@ void accessL1(uint32_t address, uint8_t *data, uint32_t mode) {
 
   CacheLine *Line = &CacheL1.lines[index];
 
-  MemAddress = address - offset; // get address of the block in memory 
+  MemAddress = (address >> OFFSET_BITS) << OFFSET_BITS; // get address of the block in memory 
 
   /* access Cache*/
 
@@ -62,10 +62,10 @@ void accessL1(uint32_t address, uint8_t *data, uint32_t mode) {
     accessDRAM(MemAddress, TempBlock, MODE_READ); // get new block from DRAM
     if ((Line->Valid) && (Line->Dirty)) { // line has dirty block
       uint32_t MemAddress_old = (Line->Tag << L1_INDEX_BITS || index) << OFFSET_BITS;
-      accessDRAM(MemAddress_old, &(Line->Data[offset]), MODE_WRITE); // then write back old block (Write Back policy)
+      accessDRAM(MemAddress_old, Line->Data, MODE_WRITE); // then write back old block (Write Back policy)
     }
 
-    memcpy(&(Line->Data[offset]), TempBlock, BLOCK_SIZE); // copy new block to cache line
+    memcpy(Line->Data, TempBlock, BLOCK_SIZE); // copy new block to cache line
     Line->Valid = 1;
     Line->Tag = Tag;
     Line->Dirty = 0;

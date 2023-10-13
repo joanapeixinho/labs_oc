@@ -58,16 +58,16 @@ void accessL1(uint32_t address, uint8_t *data, uint32_t mode) {
 
   CacheLine *Line = &CacheL2.linesL1[index];
 
-  L2Address = address - offset;
+  L2Address = (address >> OFFSET_BITS) << OFFSET_BITS;
 
   /*MISS*/
   if (!Line->Valid || Line->Tag != Tag) {         // if block not present - miss
-    accessL2(address, TempBlock, MODE_READ); // get new block from L2
+    accessL2(L2Address, TempBlock, MODE_READ); // get new block from L2
     if ((Line->Valid) && (Line->Dirty)) { // line has dirty block
-      accessL2(L2Address, &(Line->Data[offset]), MODE_WRITE); // then write back old block
+      accessL2(L2Address, Line->Data, MODE_WRITE); // then write back old block
     }
 
-    memcpy(&(Line->Data[offset]), TempBlock, BLOCK_SIZE); // copy new block to cache line
+    memcpy(Line->Data, TempBlock, BLOCK_SIZE); // copy new block to cache line
     Line->Valid = 1;
     Line->Tag = Tag;
     Line->Dirty = 0;
@@ -87,16 +87,15 @@ void accessL1(uint32_t address, uint8_t *data, uint32_t mode) {
 }
 
 void accessL2(uint32_t address, uint8_t *data, uint32_t mode) {
-  uint32_t index, Tag, MemAddress, offset;
+  uint32_t index, Tag, MemAddress;
   uint8_t TempBlock[BLOCK_SIZE];
 
   Tag = address >> (L2_INDEX_BITS + OFFSET_BITS);
   index = (address & ((1 << (L2_INDEX_BITS + OFFSET_BITS)) - 1)) >> (OFFSET_BITS); 
-  offset = (address & ((1 << OFFSET_BITS) - 1));
 
   CacheLine *Line = &CacheL2.linesL2[index];
 
-  MemAddress = address - offset; // get address of the block in memory 
+  MemAddress = (address >> OFFSET_BITS) << OFFSET_BITS;
 
   /* access Cache*/
 
@@ -105,22 +104,22 @@ void accessL2(uint32_t address, uint8_t *data, uint32_t mode) {
     accessDRAM(MemAddress, TempBlock, MODE_READ); // get new block from L2
     if ((Line->Valid) && (Line->Dirty)) { // line has dirty block
       uint32_t MemAddress_old = (Line->Tag << L2_INDEX_BITS || index) << OFFSET_BITS;
-      accessDRAM(MemAddress_old, &(Line->Data[offset]), MODE_WRITE); // then write back old block (Write Back policy)
+      accessDRAM(MemAddress_old, Line->Data, MODE_WRITE); // then write back old block (Write Back policy)
     }
 
-    memcpy(&(Line->Data[offset]), TempBlock, BLOCK_SIZE); // copy new block to cache line
+    memcpy(Line->Data, TempBlock, BLOCK_SIZE); // copy new block to cache line
     Line->Valid = 1;
     Line->Tag = Tag;
     Line->Dirty = 0;
   } // if miss, then replaced with the correct block
 
   if (mode == MODE_READ) {    // read data from cache line
-    memcpy(data, &(Line->Data[offset]), BLOCK_SIZE);
+    memcpy(data, Line->Data, BLOCK_SIZE);
     time += L2_READ_TIME;
   }
 
   if (mode == MODE_WRITE) { // write data from cache line
-    memcpy(&(Line->Data[offset]), data, BLOCK_SIZE);
+    memcpy(Line->Data, data, BLOCK_SIZE);
     time += L2_WRITE_TIME;
     Line->Dirty = 1;
   }
